@@ -19,30 +19,30 @@ type ClockModalProps = {
 };
 
 type State = {
-  name: string | undefined;
-  buyIn: string | undefined;
-  site: string | undefined;
-  weekdays: number[] | undefined;
-  startTime: string | undefined;
-  initialStackSize: string | undefined;
-  desiredStackSize: string | undefined;
-  level: string | undefined;
-  blind: string | undefined;
-  blindDuration: string | undefined;
+  name: string | null;
+  buyIn: number | null;
+  site: string | null;
+  weekdays: number[] | null;
+  startTime: string | null;
+  initialStackSize: number | null;
+  desiredStackSize: number | null;
+  level: number | null;
+  blind: number | null;
+  blindDuration: number | null;
 };
 
 export function ClockModal({ show = false, onHide }: ClockModalProps) {
   const [state, setState] = useState<State>({
-    name: undefined,
-    buyIn: undefined,
-    site: undefined,
-    weekdays: undefined,
-    startTime: undefined,
-    initialStackSize: undefined,
-    desiredStackSize: undefined,
-    level: undefined,
-    blind: undefined,
-    blindDuration: undefined,
+    name: null,
+    buyIn: null,
+    site: null,
+    weekdays: null,
+    startTime: null,
+    initialStackSize: null,
+    desiredStackSize: null,
+    level: null,
+    blind: null,
+    blindDuration: null,
   });
   const {
     name,
@@ -72,6 +72,7 @@ export function ClockModal({ show = false, onHide }: ClockModalProps) {
           <Input
             label='Buy-in'
             value={buyIn}
+            type='number'
             onChange={onChange('buyIn')}
             required
           />
@@ -102,7 +103,7 @@ export function ClockModal({ show = false, onHide }: ClockModalProps) {
             <Input
               label='Desired Stack Size (in BB)'
               value={desiredStackSize}
-              onChange={onChange('desiredStackSize')}
+              onChange={changeDesiredStackSize}
               type='number'
               required
             />
@@ -118,7 +119,7 @@ export function ClockModal({ show = false, onHide }: ClockModalProps) {
             <Input
               label='Blind'
               value={blind}
-              onChange={onChange('blind')}
+              onChange={changeBlind}
               type='number'
               required
             />
@@ -133,7 +134,11 @@ export function ClockModal({ show = false, onHide }: ClockModalProps) {
         </ModalBody>
         <ModalFooter gap={4}>
           <Button>Close</Button>
-          <Button colorScheme='green' isDisabled={!isValidForm()}>
+          <Button
+            colorScheme='green'
+            isDisabled={!isValidForm()}
+            onClick={saveTournament}
+          >
             Save
           </Button>
         </ModalFooter>
@@ -141,21 +146,46 @@ export function ClockModal({ show = false, onHide }: ClockModalProps) {
     </Modal>
   );
   function onChange(label: keyof State) {
-    return (value: string) => {
-      setState(prev => ({ ...prev, [label]: value }));
+    return (value: string | number) => {
+      setState({ ...state, [label]: value });
     };
   }
   function toggleWeekday(index: number) {
-    setState(prev => ({
-      ...prev,
+    setState({
+      ...state,
       weekdays: weekdays?.includes(index)
         ? weekdays.filter(weekday => weekday !== index)
         : [...(weekdays || []), index],
-    }));
+    });
   }
   function isValidForm() {
     return Object.values(state).every(value =>
       Array.isArray(value) ? value.length : value,
     );
+  }
+  function changeDesiredStackSize(value: number) {
+    setState({
+      ...state,
+      ...(initialStackSize
+        ? {
+            blind: initialStackSize / value,
+          }
+        : {}),
+      desiredStackSize: value,
+    });
+  }
+  function changeBlind(value: number) {
+    setState({
+      ...state,
+      ...(initialStackSize
+        ? {
+            desiredStackSize: initialStackSize / value,
+          }
+        : {}),
+      blind: value,
+    });
+  }
+  function saveTournament() {
+    console.log(state);
   }
 }

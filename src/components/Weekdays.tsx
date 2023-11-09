@@ -8,7 +8,7 @@ import { Checkbox } from './Checkbox';
 
 type WeekdaysProps = {
   toggleWeekday: (day: number) => unknown;
-  weekdays: number[] | undefined;
+  weekdays: number[] | null;
 };
 export function Weekdays({ toggleWeekday, weekdays }: WeekdaysProps) {
   const isError = weekdays?.length === 0;

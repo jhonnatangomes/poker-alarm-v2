@@ -3,35 +3,55 @@ import {
   FormLabel,
   Input as CInput,
   FormErrorMessage,
-  NumberInput,
-  NumberInputField,
 } from '@chakra-ui/react';
-import { ChangeEvent, HTMLInputTypeAttribute } from 'react';
+import { ChangeEvent, KeyboardEvent } from 'react';
 
-type InputProps = {
+type Value<T> = T extends 'number' ? number : string;
+type InputType = 'text' | 'number' | 'time';
+type InputProps<T extends InputType> = {
   label: string;
   required?: boolean;
-  type?: HTMLInputTypeAttribute;
-  value?: string;
-  onChange?: (e: string) => unknown;
+  type?: T | null;
+  value: Value<T> | null;
+  onChange?: (e: Value<T>) => unknown;
 };
 
-export function Input({ label, required, type, value, onChange }: InputProps) {
-  const isError = value === '';
+export function Input<T extends InputType>({
+  label,
+  required,
+  type,
+  value,
+  onChange,
+}: InputProps<T>) {
+  const isError = required && value !== null && !value;
   return (
     <FormControl isInvalid={isError} isRequired={required}>
       <FormLabel>{label}</FormLabel>
-      {type === 'number' ? (
-        <NumberInput>
-          <NumberInputField onChange={internalOnChange} value={value} />
-        </NumberInput>
-      ) : (
-        <CInput onChange={internalOnChange} value={value} type={type} />
-      )}
+      <CInput
+        onChange={internalOnChange}
+        value={value || ''}
+        type={type || 'text'}
+        onKeyDown={sanitizeInput}
+      />
       <FormErrorMessage>{label} is required</FormErrorMessage>
     </FormControl>
   );
   function internalOnChange(e: ChangeEvent<HTMLInputElement>) {
-    onChange?.(e.target.value);
+    switch (type) {
+      case 'number':
+        return onChange?.(parseFloat(e.target.value) as Value<T>);
+      default:
+        return onChange?.(e.target.value as Value<T>);
+    }
+  }
+  function sanitizeInput(e: KeyboardEvent<HTMLInputElement>) {
+    if (
+      type === 'number' &&
+      !e.key.match(/[0-9.]/) &&
+      e.key !== 'Tab' &&
+      e.key !== 'Backspace'
+    ) {
+      e.preventDefault();
+    }
   }
 }
