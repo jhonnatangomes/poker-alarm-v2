@@ -18,7 +18,7 @@ export function Checkbox({ label, checked = false, onChange }: CheckboxProps) {
       <CCheckbox checked={checked} onChange={internalOnChange} />
     </Stack>
   );
-  function internalOnChange(e: ChangeEvent<HTMLInputElement>) {
+  function internalOnChange(_e: ChangeEvent<HTMLInputElement>) {
     onChange?.();
   }
 }

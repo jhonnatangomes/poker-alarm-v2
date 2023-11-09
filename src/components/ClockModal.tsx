@@ -9,30 +9,35 @@ import {
   ModalHeader,
   ModalOverlay,
 } from '@chakra-ui/react';
+import { useState } from 'react';
 import { Input } from './Input';
 import { Weekdays } from './Weekdays';
-import { useState } from 'react';
+import { useTournaments } from '../hooks/useTournaments';
+import { Form } from '../lib/types';
+import { Tournament } from '../lib/tournaments';
+import { assoc, mergeLeft } from 'ramda';
 
 type ClockModalProps = {
   show?: boolean;
-  onHide: () => unknown;
+  hide: () => unknown;
 };
 
-type State = {
-  name: string | null;
-  buyIn: number | null;
-  site: string | null;
-  weekdays: number[] | null;
-  startTime: string | null;
-  initialStackSize: number | null;
-  desiredStackSize: number | null;
-  level: number | null;
-  blind: number | null;
-  blindDuration: number | null;
+export type TournamentForm = Form<Tournament>;
+const INITIAL_STATE = {
+  name: null,
+  buyIn: null,
+  site: null,
+  weekdays: null,
+  startTime: null,
+  initialStackSize: null,
+  desiredStackSize: null,
+  level: null,
+  blind: null,
+  blindDuration: null,
 };
 
-export function ClockModal({ show = false, onHide }: ClockModalProps) {
-  const [state, setState] = useState<State>({
+export function ClockModal({ show = false, hide }: ClockModalProps) {
+  const [state, setState] = useState<TournamentForm>({
     name: null,
     buyIn: null,
     site: null,
@@ -56,8 +61,9 @@ export function ClockModal({ show = false, onHide }: ClockModalProps) {
     blind,
     blindDuration,
   } = state;
+  const { addTournament } = useTournaments();
   return (
-    <Modal isOpen={show} onClose={onHide} isCentered size='2xl'>
+    <Modal isOpen={show} onClose={hide} isCentered size='2xl'>
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>New Tournament Clock</ModalHeader>
@@ -136,7 +142,7 @@ export function ClockModal({ show = false, onHide }: ClockModalProps) {
           <Button>Close</Button>
           <Button
             colorScheme='green'
-            isDisabled={!isValidForm()}
+            isDisabled={!isValidForm(state)}
             onClick={saveTournament}
           >
             Save
@@ -145,47 +151,54 @@ export function ClockModal({ show = false, onHide }: ClockModalProps) {
       </ModalContent>
     </Modal>
   );
-  function onChange(label: keyof State) {
+  function onChange(label: keyof TournamentForm) {
     return (value: string | number) => {
       setState({ ...state, [label]: value });
     };
   }
   function toggleWeekday(index: number) {
-    setState({
-      ...state,
-      weekdays: weekdays?.includes(index)
-        ? weekdays.filter(weekday => weekday !== index)
-        : [...(weekdays || []), index],
-    });
+    setState(
+      assoc(
+        'weekdays',
+        weekdays?.includes(index)
+          ? weekdays.filter(weekday => weekday !== index)
+          : [...(weekdays || []), index],
+      ),
+    );
   }
-  function isValidForm() {
+  function isValidForm(state: TournamentForm): state is Tournament {
     return Object.values(state).every(value =>
       Array.isArray(value) ? value.length : value,
     );
   }
   function changeDesiredStackSize(value: number) {
-    setState({
-      ...state,
-      ...(initialStackSize
-        ? {
-            blind: initialStackSize / value,
-          }
-        : {}),
-      desiredStackSize: value,
-    });
+    setState(
+      mergeLeft({
+        ...(initialStackSize
+          ? {
+              blind: initialStackSize / value,
+            }
+          : {}),
+        desiredStackSize: value,
+      }),
+    );
   }
   function changeBlind(value: number) {
-    setState({
-      ...state,
-      ...(initialStackSize
-        ? {
-            desiredStackSize: initialStackSize / value,
-          }
-        : {}),
-      blind: value,
-    });
+    setState(
+      mergeLeft({
+        ...(initialStackSize
+          ? {
+              desiredStackSize: initialStackSize / value,
+            }
+          : {}),
+        blind: value,
+      }),
+    );
   }
   function saveTournament() {
-    console.log(state);
+    if (!isValidForm(state)) return;
+    addTournament(state);
+    setState(INITIAL_STATE);
+    hide();
   }
 }

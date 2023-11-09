@@ -1,8 +1,10 @@
+import dayjs from 'dayjs';
+
 type ClockProps = {
   radius?: number;
   remainingTime: number;
   duration: number;
-  finishTime?: string;
+  finishTime?: Date;
 };
 export function Clock({
   radius = 68,
@@ -46,7 +48,7 @@ export function Clock({
         {finishTime && (
           <div className='flex justify-center mt-2'>
             <p className='text-xs w-14 text-center border border-solid border-gray rounded-lg'>
-              {finishTime}
+              {dayjs(finishTime).format('HH:mm')}
             </p>
           </div>
         )}
