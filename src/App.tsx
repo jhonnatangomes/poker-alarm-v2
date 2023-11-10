@@ -26,14 +26,14 @@ type Clock = {
 };
 
 function App() {
-  const { tournaments, addTournaments } = useTournaments();
+  const { tournaments, addTournaments, deleteTournament } = useTournaments();
   const [state, setState] = useState({
     isModalOpen: false,
     clockIndexToEdit: -1,
     clocks: [] as Clock[],
     intervalId: null as number | null,
   });
-  const { isModalOpen, clocks, intervalId } = state;
+  const { isModalOpen, clocks, intervalId, clockIndexToEdit } = state;
   const anyClocksTicking = clocks.some(prop('isTicking'));
   const isDev = import.meta.env.DEV;
   useEffect(() => {
@@ -73,6 +73,8 @@ function App() {
               {...clock}
               onPlay={onPlay(i)}
               onStop={onStop(i)}
+              onDelete={() => deleteTournament(clock.tournament)}
+              onEdit={() => editClock(i)}
             />
           ))}
           {isDev && (
@@ -86,6 +88,13 @@ function App() {
                 label='Batch Create Test Tournaments'
               />
             </>
+          )}
+          {clockIndexToEdit !== -1 && (
+            <ClockModal
+              show={true}
+              hide={hideEditModal}
+              tournament={clocks[clockIndexToEdit].tournament}
+            />
           )}
         </div>
         <div className='fixed bottom-20 right-6 flex justify-center items-center h-20 w-20'>
@@ -312,6 +321,12 @@ function App() {
         }),
       }),
     );
+  }
+  function editClock(index: number) {
+    setState(assoc('clockIndexToEdit', index));
+  }
+  function hideEditModal() {
+    setState(assoc('clockIndexToEdit', -1));
   }
 }
 

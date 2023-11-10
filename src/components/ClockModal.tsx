@@ -9,7 +9,7 @@ import {
   ModalHeader,
   ModalOverlay,
 } from '@chakra-ui/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Input } from './Input';
 import { Weekdays } from './Weekdays';
 import { useTournaments } from '../hooks/useTournaments';
@@ -20,6 +20,7 @@ import { assoc, mergeLeft } from 'ramda';
 type ClockModalProps = {
   show?: boolean;
   hide: () => unknown;
+  tournament?: Tournament;
 };
 
 export type TournamentForm = Form<Tournament>;
@@ -36,7 +37,11 @@ const INITIAL_STATE = {
   blindDuration: null,
 };
 
-export function ClockModal({ show = false, hide }: ClockModalProps) {
+export function ClockModal({
+  show = false,
+  hide,
+  tournament,
+}: ClockModalProps) {
   const [state, setState] = useState<TournamentForm>({
     name: null,
     buyIn: null,
@@ -62,6 +67,11 @@ export function ClockModal({ show = false, hide }: ClockModalProps) {
     blindDuration,
   } = state;
   const { addTournaments } = useTournaments();
+  useEffect(() => {
+    if (tournament) {
+      setState(tournament);
+    }
+  }, [tournament]);
   return (
     <Modal isOpen={show} onClose={hide} isCentered size='2xl'>
       <ModalOverlay />

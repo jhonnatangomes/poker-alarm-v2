@@ -1,5 +1,6 @@
 import { BsPlayCircle, BsStopCircle } from 'react-icons/bs';
 import { Clock } from './Clock';
+import { AiOutlineEdit, AiOutlineDelete } from 'react-icons/ai';
 
 type ClockCardProps = {
   name: string;
@@ -10,6 +11,8 @@ type ClockCardProps = {
   remainingTime: number;
   finishTime?: Date;
   disabled?: boolean;
+  onEdit: () => unknown;
+  onDelete: () => unknown;
 };
 
 export function ClockCard({
@@ -21,10 +24,12 @@ export function ClockCard({
   duration,
   remainingTime,
   disabled,
+  onDelete,
+  onEdit,
 }: ClockCardProps) {
   return (
     <div
-      className={`bg-grayCard w-[250px] p-2 flex flex-col items-center justify-between gap-y-2 ${
+      className={`bg-grayCard w-[250px] p-8 flex flex-col items-center justify-between gap-y-2 relative ${
         disabled ? 'opacity-60 cursor-not-allowed' : ''
       }`}
     >
@@ -48,6 +53,16 @@ export function ClockCard({
             />
           )}
         </button>
+      </div>
+      <div className='absolute top-3 right-2 flex gap-x-2'>
+        <AiOutlineEdit
+          onClick={!disabled ? onEdit : undefined}
+          className='cursor-pointer'
+        />
+        <AiOutlineDelete
+          onClick={!disabled ? onDelete : undefined}
+          className='cursor-pointer'
+        />
       </div>
     </div>
   );
