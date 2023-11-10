@@ -9,7 +9,7 @@ import {
   isWithinStartingRange,
 } from './lib/tournaments';
 import { ClockCard } from './components/ClockCard';
-import { assoc, prop } from 'ramda';
+import { assoc, mergeLeft, prop } from 'ramda';
 import dayjs from 'dayjs';
 
 type Clock = {
@@ -19,9 +19,11 @@ type Clock = {
   name: string;
   isTicking: boolean;
   tournament: Tournament;
+  notificationTimeoutId?: number;
 };
+
 function App() {
-  const { tournaments } = useTournaments();
+  const { tournaments, addTournament } = useTournaments();
   const tournamentClocksToRender = tournaments.filter(tournament =>
     isWithinStartingRange(tournament, Date.now()),
   );
@@ -31,7 +33,8 @@ function App() {
     clocks: [] as Clock[],
     intervalId: null as number | null,
   });
-  const { isModalOpen, clocks } = state;
+  const { isModalOpen, clocks, intervalId } = state;
+  const isDev = import.meta.env.DEV;
   useEffect(() => {
     setState(
       assoc(
@@ -42,17 +45,24 @@ function App() {
           remainingTime: 0,
           isTicking: false,
           tournament,
+          notificationTimeoutId: null,
         })),
       ),
     );
   }, [tournaments]);
   return (
     <div className='h-screen w-full flex flex-col justify-between'>
-      <div className='h-[95%] p-6 flex flex-wrap gap-4 overflow-y-auto'>
+      <div className='p-6 flex flex-wrap gap-4 overflow-y-auto'>
         {clocks.map((clock, i) => (
           <ClockCard key={i} {...clock} onPlay={onPlay(i)} onStop={onStop(i)} />
         ))}
         <NewClockCard onClick={openClockModal} />
+        {isDev && (
+          <NewClockCard
+            onClick={createNewTestTournament}
+            label='Create Test Tournament'
+          />
+        )}
       </div>
       <div className='h-[5%] bg-grayCard'></div>
       <ClockModal show={isModalOpen} hide={hideClockModal} />
@@ -65,16 +75,14 @@ function App() {
     setState(assoc('isModalOpen', false));
   }
   function onPlay(index: number) {
-    return () =>
-      setState(state => {
-        const { intervalId, clocks } = state;
-        const { tournament } = clocks[index];
-        const now = Date.now();
-        const tournamentEnterTime = calculateEnterTime(tournament, now);
-        const duration = dayjs(tournamentEnterTime).diff(dayjs(now));
-        return {
-          ...state,
-          ...(!intervalId ? { intervalId: setInterval(tickClocks, 300) } : {}),
+    return () => {
+      const { tournament } = clocks[index];
+      const now = Date.now();
+      const tournamentEnterTime = calculateEnterTime(tournament, now);
+      const duration = dayjs(tournamentEnterTime).diff(dayjs(now));
+      setState(
+        mergeLeft({
+          ...(!intervalId ? { intervalId: setInterval(tickClocks, 200) } : {}),
           clocks: clocks.map((clock, i) =>
             i === index
               ? {
@@ -83,49 +91,108 @@ function App() {
                   duration,
                   remainingTime: duration,
                   finishTime: tournamentEnterTime,
+                  notificationTimeoutId: setTimeout(notifyEndClock, duration),
                 }
               : clock,
           ),
-        };
-      });
+        }),
+      );
+    };
   }
   function onStop(index: number) {
-    return () =>
-      setState(state => {
-        const { clocks, intervalId } = state;
-        const singleClockTicking =
-          clocks.filter(prop('isTicking')).length === 1;
-        if (singleClockTicking && intervalId) clearInterval(intervalId);
-        return {
-          ...state,
+    return () => {
+      const singleClockTicking = clocks.filter(prop('isTicking')).length === 1;
+      if (singleClockTicking && intervalId) clearInterval(intervalId);
+      return setState(
+        mergeLeft({
           ...(singleClockTicking ? { intervalId: null } : {}),
-          clocks: clocks.map((clock, i) =>
-            i === index
-              ? {
-                  ...clock,
-                  isTicking: false,
-                  duration: 0,
-                  remainingTime: 0,
-                  finishTime: undefined,
-                }
-              : clock,
-          ),
-        };
-      });
+          clocks: clocks.map((clock, i) => {
+            if (i === index) {
+              clearTimeout(clock.notificationTimeoutId);
+              return {
+                ...clock,
+                isTicking: false,
+                duration: 0,
+                remainingTime: 0,
+                finishTime: undefined,
+                notificationTimeoutId: undefined,
+              };
+            }
+            return clock;
+          }),
+        }),
+      );
+    };
   }
   function tickClocks() {
     setState(state => {
-      const { clocks } = state;
+      const { clocks, intervalId } = state;
+      const singleClockTicking = clocks.filter(prop('isTicking')).length === 1;
+      const clockEnded =
+        (clocks.find(prop('isTicking'))?.remainingTime || 0) <= 0;
+      const lastClockStopped = singleClockTicking && clockEnded && !!intervalId;
+      if (lastClockStopped) {
+        if (clockEnded && intervalId) clearInterval(intervalId);
+      }
       return {
         ...state,
         clocks: clocks.map(clock => {
           const { isTicking, finishTime } = clock;
           if (!isTicking) return clock;
           const now = dayjs();
-          return { ...clock, remainingTime: dayjs(finishTime).diff(now) };
+          const remainingTime = dayjs(finishTime).diff(now, 'seconds') * 1000;
+          const clockEnded = remainingTime <= 0;
+          return {
+            ...clock,
+            ...(clockEnded ? { isTicking: false } : {}),
+            remainingTime: clockEnded ? 0 : remainingTime,
+          };
         }),
+        ...(lastClockStopped ? { intervalId: null } : {}),
       };
     });
+  }
+  function createSound() {
+    const audio = new Audio('alarm.mp3');
+    audio.loop = true;
+    return audio;
+  }
+  function startSound(audio: HTMLAudioElement) {
+    audio.play();
+    return audio;
+  }
+  function stopSound(audio: HTMLAudioElement) {
+    audio.pause();
+  }
+  async function notifyEndClock() {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      alert('enable notifications');
+      return;
+    }
+    const notification = new Notification('End of the clock', {
+      body: 'The clock has ended',
+    });
+    let soundElement = createSound();
+    notification.addEventListener('show', () => startSound(soundElement));
+    notification.addEventListener('click', () => stopSound(soundElement));
+    notification.addEventListener('close', () => stopSound(soundElement));
+  }
+  function createNewTestTournament() {
+    const now = dayjs();
+    const tournament: Tournament = {
+      name: 'name',
+      buyIn: 5,
+      site: 'site',
+      weekdays: [now.get('day')],
+      startTime: now.add(1, 'minute').format('HH:mm'),
+      initialStackSize: 10_000,
+      desiredStackSize: 20,
+      level: 2,
+      blind: 500,
+      blindDuration: 0.1,
+    };
+    addTournament(tournament);
   }
 }
 

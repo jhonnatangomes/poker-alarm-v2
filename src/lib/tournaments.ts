@@ -48,16 +48,26 @@ export function calculateEnterTime(tournament: Tournament, now: number): Date {
   const [hours, minutes] = getTournamentEnterTime(tournament);
   const tournamentStartTime = dayjs(now)
     .set('hours', hours)
-    .set('minutes', minutes);
-  const totalWaitingTime = level * blindDuration;
+    .set('minutes', minutes)
+    .set('seconds', 0)
+    .set('milliseconds', 0);
+  const levelToEnter = level === 1 ? 1 : level - 1;
+  const totalWaitingTime = levelToEnter * blindDuration;
   return getEnterTimeRecursive(tournamentStartTime, totalWaitingTime).toDate();
   function getEnterTimeRecursive(time: Dayjs, blindsTimeLeft: number) {
-    const endOfHour = time.endOf('hour');
-    const timeToBreak = endOfHour.subtract(5, 'minutes').diff(time);
-    if (blindsTimeLeft <= timeToBreak) {
+    const startOfNextHour = time.add(1, 'hour').startOf('hour');
+    const breakTime = startOfNextHour.subtract(5, 'minutes');
+    const timeTillBreak = breakTime.diff(time);
+    if (time.isAfter(breakTime)) {
+      return getEnterTimeRecursive(startOfNextHour, blindsTimeLeft);
+    }
+    if (blindsTimeLeft <= timeTillBreak) {
       return time.add(blindsTimeLeft, 'minutes');
     }
-    return getEnterTimeRecursive(endOfHour, blindsTimeLeft - timeToBreak);
+    return getEnterTimeRecursive(
+      startOfNextHour,
+      blindsTimeLeft - timeTillBreak,
+    );
   }
 }
 
