@@ -24,11 +24,11 @@ export function ClockCard({
 }: ClockCardProps) {
   return (
     <div
-      className={`bg-grayCard w-[250px] h-[250px] flex flex-col items-center gap-y-2 ${
+      className={`bg-grayCard w-[250px] p-2 flex flex-col items-center justify-between gap-y-2 ${
         disabled ? 'opacity-60 cursor-not-allowed' : ''
       }`}
     >
-      <div>{name}</div>
+      <span className='text-center'>{name}</span>
       <Clock
         duration={duration}
         remainingTime={remainingTime}

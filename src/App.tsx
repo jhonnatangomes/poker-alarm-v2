@@ -225,7 +225,7 @@ function App() {
   function createNewTestTournament() {
     const now = dayjs();
     const tournament: Tournament = {
-      name: 'name',
+      name: 'name very large big giant enormous gigantic name lol',
       buyIn: 5,
       site: 'site',
       weekdays: [now.get('day')],
