@@ -31,14 +31,11 @@ export function isWithinStartingRange(
   }
   const [hours, minutes] = getTournamentEnterTime(tournament);
   const tournamentStartTimestamps = possibleStartingDays.map(startDay =>
-    dayjs(startTimestamp)
-      .set('hours', hours)
-      .set('minutes', minutes)
-      .set('day', startDay),
+    timestamp.set('hours', hours).set('minutes', minutes).set('day', startDay),
   );
   return tournamentStartTimestamps.some(
     tournamentTimestamp =>
-      tournamentTimestamp.isAfter(timestamp) &&
+      tournamentTimestamp.isAfter(timestamp.subtract(4, 'hours')) &&
       tournamentTimestamp.isBefore(maximumStartTimestamp),
   );
 }
