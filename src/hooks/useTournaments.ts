@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Tournament } from '../lib/tournaments';
-import { equals } from 'ramda';
 
 export function useTournaments() {
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
@@ -12,16 +11,32 @@ export function useTournaments() {
   return {
     tournaments,
     addTournaments: (...tournamentsToAdd: Tournament[]) => {
+      const nextId = tournaments.length + 1;
       localStorage.setItem(
         'tournaments',
-        JSON.stringify([...tournaments, ...tournamentsToAdd]),
+        JSON.stringify([
+          ...tournaments,
+          ...tournamentsToAdd.map((tournament, i) => ({
+            ...tournament,
+            id: nextId + i,
+          })),
+        ]),
       );
       dispatchEvent(new Event('storage'));
     },
-    deleteTournament: (tournament: Tournament) => {
+    deleteTournament: (id?: number) => {
       localStorage.setItem(
         'tournaments',
-        JSON.stringify(tournaments.filter(t => !equals(t, tournament))),
+        JSON.stringify(tournaments.filter(t => t.id !== id)),
+      );
+      dispatchEvent(new Event('storage'));
+    },
+    editTournament: (tournament: Tournament) => {
+      localStorage.setItem(
+        'tournaments',
+        JSON.stringify(
+          tournaments.map(t => (t.id === tournament.id ? tournament : t)),
+        ),
       );
       dispatchEvent(new Event('storage'));
     },

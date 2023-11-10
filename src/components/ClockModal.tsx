@@ -15,7 +15,7 @@ import { Weekdays } from './Weekdays';
 import { useTournaments } from '../hooks/useTournaments';
 import { Form } from '../lib/types';
 import { Tournament } from '../lib/tournaments';
-import { assoc, mergeLeft } from 'ramda';
+import { assoc, mergeLeft, omit } from 'ramda';
 
 type ClockModalProps = {
   show?: boolean;
@@ -55,6 +55,7 @@ export function ClockModal({
     blindDuration: null,
   });
   const {
+    id,
     name,
     buyIn,
     site,
@@ -66,7 +67,7 @@ export function ClockModal({
     blind,
     blindDuration,
   } = state;
-  const { addTournaments } = useTournaments();
+  const { addTournaments, editTournament } = useTournaments();
   useEffect(() => {
     if (tournament) {
       setState(tournament);
@@ -177,7 +178,7 @@ export function ClockModal({
     );
   }
   function isValidForm(state: TournamentForm): state is Tournament {
-    return Object.values(state).every(value =>
+    return Object.values(omit(['id'], state)).every(value =>
       Array.isArray(value) ? value.length : value,
     );
   }
@@ -207,7 +208,11 @@ export function ClockModal({
   }
   function saveTournament() {
     if (!isValidForm(state)) return;
-    addTournaments(state);
+    if (id) {
+      editTournament(state);
+    } else {
+      addTournaments(state);
+    }
     setState(INITIAL_STATE);
     hide();
   }

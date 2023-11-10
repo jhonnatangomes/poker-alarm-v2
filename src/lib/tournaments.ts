@@ -2,6 +2,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import { intersection, uniq } from 'ramda';
 
 export type Tournament = {
+  id?: number;
   name: string;
   buyIn: number;
   site: string;

@@ -81,7 +81,7 @@ function App() {
               {...clock}
               onPlay={onPlay(i)}
               onStop={onStop(i)}
-              onDelete={() => deleteTournament(clock.tournament)}
+              onDelete={() => deleteTournament(clock.tournament.id)}
               onEdit={() => editClock(i)}
             />
           ))}
