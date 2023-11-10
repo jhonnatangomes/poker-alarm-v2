@@ -1,7 +1,5 @@
-import { BsPlayCircle, BsStopCircle } from 'react-icons/bs';
 import { Clock } from './Clock';
-import { AiOutlineEdit, AiOutlineDelete } from 'react-icons/ai';
-import { BiDuplicate } from 'react-icons/bi';
+import { Icon } from './Icon';
 
 type ClockCardProps = {
   name: string;
@@ -32,9 +30,7 @@ export function ClockCard({
 }: ClockCardProps) {
   return (
     <div
-      className={`bg-grayCard w-[250px] p-8 flex flex-col items-center justify-between gap-y-2 relative ${
-        disabled ? 'opacity-60 cursor-not-allowed' : ''
-      }`}
+      className={`bg-grayCard w-[250px] p-8 flex flex-col items-center justify-between gap-y-2 relative`}
     >
       <span className='text-center'>{name}</span>
       <Clock
@@ -45,31 +41,30 @@ export function ClockCard({
       <div>
         <button>
           {isTicking ? (
-            <BsStopCircle
-              className='w-10 h-10 cursor-pointer'
-              onClick={!disabled ? onStop : undefined}
+            <Icon
+              icon='stop'
+              className='w-10 h-10'
+              onClick={onStop}
+              disabled={disabled}
             />
           ) : (
-            <BsPlayCircle
-              className='w-10 h-10 cursor-pointer'
-              onClick={!disabled ? onPlay : undefined}
+            <Icon
+              icon='play'
+              className='w-10 h-10'
+              onClick={onPlay}
+              disabled={disabled}
             />
           )}
         </button>
       </div>
       <div className='absolute top-3 right-2 flex gap-x-2'>
-        <BiDuplicate
-          className='cursor-pointer'
-          onClick={!disabled ? onDuplicate : undefined}
-        />
-        <AiOutlineEdit
-          onClick={!disabled ? onEdit : undefined}
+        <Icon
+          icon='duplicate'
+          onClick={onDuplicate}
           className='cursor-pointer'
         />
-        <AiOutlineDelete
-          onClick={!disabled ? onDelete : undefined}
-          className='cursor-pointer'
-        />
+        <Icon icon='edit' onClick={onEdit} className='cursor-pointer' />
+        <Icon icon='delete' onClick={onDelete} className='cursor-pointer' />
       </div>
     </div>
   );

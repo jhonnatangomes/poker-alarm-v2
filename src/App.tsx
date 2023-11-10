@@ -11,8 +11,7 @@ import {
 import { ClockCard } from './components/ClockCard';
 import { assoc, mergeLeft, omit, prop } from 'ramda';
 import dayjs from 'dayjs';
-import { BsStopCircle, BsPlayCircle } from 'react-icons/bs';
-import { BsFillPlusCircleFill } from 'react-icons/bs';
+import { Icon } from './components/Icon';
 
 type Clock = {
   remainingTime: number;
@@ -107,23 +106,18 @@ function App() {
           )}
         </div>
         <div className='fixed bottom-20 right-6 flex justify-center items-center h-20 w-20'>
-          <BsFillPlusCircleFill
+          <Icon
+            icon='add'
             onClick={openClockModal}
-            className='text-green-600 w-16 h-16 cursor-pointer'
-          ></BsFillPlusCircleFill>
+            className='text-green-600 w-16 h-16'
+          />
         </div>
       </div>
       <div className='bg-grayCard p-2 flex items-center justify-center'>
         {anyClocksTicking ? (
-          <BsStopCircle
-            className='w-10 h-10 cursor-pointer'
-            onClick={stopAllClocks}
-          />
+          <Icon icon='stop' className='w-10 h-10' onClick={stopAllClocks} />
         ) : (
-          <BsPlayCircle
-            className='w-10 h-10 cursor-pointer'
-            onClick={startAllClocks}
-          />
+          <Icon icon='play' className='w-10 h-10' onClick={startAllClocks} />
         )}
       </div>
       <ClockModal show={isModalOpen} hide={hideClockModal} />

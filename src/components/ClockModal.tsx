@@ -113,7 +113,7 @@ export function ClockModal({
             <Input
               label='Initial Stack Size (in chips)'
               value={initialStackSize}
-              onChange={onChange('initialStackSize')}
+              onChange={changeInitialStackSize}
               type='number'
               required
             />
@@ -180,6 +180,18 @@ export function ClockModal({
   function isValidForm(state: TournamentForm): state is Tournament {
     return Object.values(omit(['id'], state)).every(value =>
       Array.isArray(value) ? value.length : value,
+    );
+  }
+  function changeInitialStackSize(value: number) {
+    setState(
+      mergeLeft({
+        ...(desiredStackSize
+          ? {
+              blind: value / desiredStackSize,
+            }
+          : {}),
+        initialStackSize: value,
+      }),
     );
   }
   function changeDesiredStackSize(value: number) {
