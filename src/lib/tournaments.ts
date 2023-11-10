@@ -35,8 +35,9 @@ export function isWithinStartingRange(
   );
   return tournamentStartTimestamps.some(
     tournamentTimestamp =>
-      tournamentTimestamp.isAfter(timestamp.subtract(4, 'hours')) &&
-      tournamentTimestamp.isBefore(maximumStartTimestamp),
+      tournamentTimestamp.isAfter(
+        timestamp.subtract(STARTING_RANGE_IN_HOURS / 2, 'hours'),
+      ) && tournamentTimestamp.isBefore(maximumStartTimestamp),
   );
 }
 

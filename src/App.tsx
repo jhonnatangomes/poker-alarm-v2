@@ -9,7 +9,7 @@ import {
   isWithinStartingRange,
 } from './lib/tournaments';
 import { ClockCard } from './components/ClockCard';
-import { assoc, mergeLeft, prop } from 'ramda';
+import { assoc, mergeLeft, prop, propOr, reverse, sortBy } from 'ramda';
 import dayjs from 'dayjs';
 import { BsStopCircle, BsPlayCircle } from 'react-icons/bs';
 
@@ -21,13 +21,11 @@ type Clock = {
   isTicking: boolean;
   tournament: Tournament;
   notificationTimeoutId?: number;
+  disabled: boolean;
 };
 
 function App() {
   const { tournaments, addTournaments } = useTournaments();
-  const tournamentClocksToRender = tournaments.filter(tournament =>
-    isWithinStartingRange(tournament, Date.now()),
-  );
   const [state, setState] = useState({
     isModalOpen: false,
     clockIndexToEdit: -1,
@@ -38,17 +36,25 @@ function App() {
   const anyClocksTicking = clocks.some(prop('isTicking'));
   const isDev = import.meta.env.DEV;
   useEffect(() => {
+    const now = Date.now();
     setState(
       assoc(
         'clocks',
-        tournamentClocksToRender.map(tournament => ({
-          name: getClockTournamentName(tournament),
-          duration: 0,
-          remainingTime: 0,
-          isTicking: false,
-          tournament,
-          notificationTimeoutId: null,
-        })),
+        reverse(
+          sortBy(
+            propOr('finishTime', ''),
+            tournaments.map(tournament => ({
+              name: getClockTournamentName(tournament),
+              duration: 0,
+              remainingTime: 0,
+              isTicking: false,
+              tournament,
+              ...(isWithinStartingRange(tournament, now)
+                ? { finishTime: calculateEnterTime(tournament, now) }
+                : { disabled: true }),
+            })),
+          ),
+        ),
       ),
     );
   }, [tournaments]);
@@ -96,10 +102,9 @@ function App() {
   }
   function onPlay(index: number) {
     return () => {
-      const { tournament } = clocks[index];
+      const { finishTime } = clocks[index];
       const now = Date.now();
-      const tournamentEnterTime = calculateEnterTime(tournament, now);
-      const duration = dayjs(tournamentEnterTime).diff(dayjs(now));
+      const duration = dayjs(finishTime).diff(dayjs(now));
       setState(
         mergeLeft({
           ...(!intervalId
@@ -112,7 +117,6 @@ function App() {
                   isTicking: true,
                   duration,
                   remainingTime: duration,
-                  finishTime: tournamentEnterTime,
                   notificationTimeoutId: window.setTimeout(
                     () => notifyEndClock(clock.name),
                     duration,
@@ -251,7 +255,8 @@ function App() {
       mergeLeft({
         intervalId: window.setInterval(tickClocks, 200),
         clocks: clocks.map(clock => {
-          const { tournament } = clock;
+          const { tournament, disabled } = clock;
+          if (disabled) return clock;
           const tournamentEnterTime = calculateEnterTime(tournament, now);
           const duration = dayjs(tournamentEnterTime).diff(dayjs(now));
           return {
@@ -260,7 +265,10 @@ function App() {
             duration,
             remainingTime: duration,
             finishTime: tournamentEnterTime,
-            notificationTimeoutId: setTimeout(notifyEndClock, duration),
+            notificationTimeoutId: window.setTimeout(
+              () => notifyEndClock(clock.name),
+              duration,
+            ),
           };
         }),
       }),
@@ -273,8 +281,8 @@ function App() {
     setState(
       mergeLeft({
         intervalId: null,
-        allClocksStarted: false,
         clocks: clocks.map(clock => {
+          if (clock.disabled) return clock;
           clearTimeout(clock.notificationTimeoutId);
           return {
             ...clock,

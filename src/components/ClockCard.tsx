@@ -9,6 +9,7 @@ type ClockCardProps = {
   duration: number;
   remainingTime: number;
   finishTime?: Date;
+  disabled?: boolean;
 };
 
 export function ClockCard({
@@ -19,9 +20,14 @@ export function ClockCard({
   finishTime,
   duration,
   remainingTime,
+  disabled,
 }: ClockCardProps) {
   return (
-    <div className='bg-grayCard w-[250px] h-[250px] flex flex-col items-center gap-y-2'>
+    <div
+      className={`bg-grayCard w-[250px] h-[250px] flex flex-col items-center gap-y-2 ${
+        disabled ? 'opacity-60 cursor-not-allowed' : ''
+      }`}
+    >
       <div>{name}</div>
       <Clock
         duration={duration}
@@ -33,12 +39,12 @@ export function ClockCard({
           {isTicking ? (
             <BsStopCircle
               className='w-10 h-10 cursor-pointer'
-              onClick={onStop}
+              onClick={!disabled ? onStop : undefined}
             />
           ) : (
             <BsPlayCircle
               className='w-10 h-10 cursor-pointer'
-              onClick={onPlay}
+              onClick={!disabled ? onPlay : undefined}
             />
           )}
         </button>
