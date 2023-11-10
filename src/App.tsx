@@ -102,7 +102,9 @@ function App() {
       const duration = dayjs(tournamentEnterTime).diff(dayjs(now));
       setState(
         mergeLeft({
-          ...(!intervalId ? { intervalId: setInterval(tickClocks, 200) } : {}),
+          ...(!intervalId
+            ? { intervalId: window.setInterval(tickClocks, 200) }
+            : {}),
           clocks: clocks.map((clock, i) =>
             i === index
               ? {
@@ -111,7 +113,7 @@ function App() {
                   duration,
                   remainingTime: duration,
                   finishTime: tournamentEnterTime,
-                  notificationTimeoutId: setTimeout(
+                  notificationTimeoutId: window.setTimeout(
                     () => notifyEndClock(clock.name),
                     duration,
                   ),
@@ -247,7 +249,7 @@ function App() {
     const now = Date.now();
     setState(
       mergeLeft({
-        intervalId: setInterval(tickClocks, 200),
+        intervalId: window.setInterval(tickClocks, 200),
         clocks: clocks.map(clock => {
           const { tournament } = clock;
           const tournamentEnterTime = calculateEnterTime(tournament, now);
@@ -271,6 +273,7 @@ function App() {
     setState(
       mergeLeft({
         intervalId: null,
+        allClocksStarted: false,
         clocks: clocks.map(clock => {
           clearTimeout(clock.notificationTimeoutId);
           return {

@@ -51,13 +51,13 @@ export function calculateEnterTime(tournament: Tournament, now: number): Date {
     .set('minutes', minutes)
     .set('seconds', 0)
     .set('milliseconds', 0);
-  const levelToEnter = level === 1 ? 1 : level - 1;
-  const totalWaitingTime = levelToEnter * blindDuration;
+  const totalWaitingTime = (level - 1) * blindDuration;
+  if (totalWaitingTime === 0) return tournamentStartTime.toDate();
   return getEnterTimeRecursive(tournamentStartTime, totalWaitingTime).toDate();
   function getEnterTimeRecursive(time: Dayjs, blindsTimeLeft: number) {
     const startOfNextHour = time.add(1, 'hour').startOf('hour');
     const breakTime = startOfNextHour.subtract(5, 'minutes');
-    const timeTillBreak = breakTime.diff(time);
+    const timeTillBreak = breakTime.diff(time, 'minutes');
     if (time.isAfter(breakTime)) {
       return getEnterTimeRecursive(startOfNextHour, blindsTimeLeft);
     }
