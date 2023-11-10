@@ -9,7 +9,7 @@ import {
   isWithinStartingRange,
 } from './lib/tournaments';
 import { ClockCard } from './components/ClockCard';
-import { assoc, mergeLeft, prop, propOr, reverse, sortBy } from 'ramda';
+import { assoc, mergeLeft, prop } from 'ramda';
 import dayjs from 'dayjs';
 import { BsStopCircle, BsPlayCircle } from 'react-icons/bs';
 import { BsFillPlusCircleFill } from 'react-icons/bs';
@@ -22,7 +22,7 @@ type Clock = {
   isTicking: boolean;
   tournament: Tournament;
   notificationTimeoutId?: number;
-  disabled: boolean;
+  disabled?: boolean;
 };
 
 function App() {
@@ -41,25 +41,33 @@ function App() {
     setState(
       assoc(
         'clocks',
-        reverse(
-          sortBy(
-            propOr('finishTime', ''),
-            tournaments.map(tournament => {
-              const finishTime = calculateEnterTime(tournament, now);
-              const enterTimePassed = dayjs(finishTime).isBefore(now);
-              return {
-                name: getClockTournamentName(tournament),
-                duration: 0,
-                remainingTime: 0,
-                isTicking: false,
-                tournament,
-                ...(isWithinStartingRange(tournament, now) && !enterTimePassed
-                  ? { finishTime }
-                  : { disabled: true }),
-              };
-            }),
-          ),
-        ),
+        tournaments
+          .map<Clock>(tournament => {
+            const finishTime = calculateEnterTime(tournament, now);
+            const enterTimePassed = dayjs(finishTime).isBefore(now);
+            return {
+              name: getClockTournamentName(tournament),
+              duration: 0,
+              remainingTime: 0,
+              isTicking: false,
+              tournament,
+              ...(isWithinStartingRange(tournament, now) && !enterTimePassed
+                ? { finishTime }
+                : { disabled: true }),
+            };
+          })
+          .sort((a, b) => {
+            if (a.finishTime && b.finishTime) {
+              return a.finishTime.getTime() - b.finishTime.getTime();
+            }
+            if (a.finishTime && !b.finishTime) {
+              return -1;
+            }
+            if (!a.finishTime && b.finishTime) {
+              return 1;
+            }
+            return 0;
+          }),
       ),
     );
   }, [tournaments]);
