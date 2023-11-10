@@ -150,7 +150,8 @@ function App() {
     setState(assoc('isModalOpen', false));
   }
   function onPlay(index: number) {
-    return () => {
+    return async () => {
+      await Notification.requestPermission();
       const { finishTime } = clocks[index];
       const now = Date.now();
       const duration = dayjs(finishTime).diff(dayjs(now));
@@ -192,7 +193,6 @@ function App() {
                 isTicking: false,
                 duration: 0,
                 remainingTime: 0,
-                finishTime: undefined,
                 notificationTimeoutId: undefined,
               };
             }
@@ -289,7 +289,7 @@ function App() {
       buyIn: 5,
       site: 'site',
       weekdays: [now.get('day')],
-      startTime: now.add(2, 'minute').format('HH:mm'),
+      startTime: now.add(50, 'minute').format('HH:mm'),
       initialStackSize: 10_000,
       desiredStackSize: 20,
       level: 2,
@@ -298,22 +298,21 @@ function App() {
     };
     addTournaments(tournament, tournament2);
   }
-  function startAllClocks() {
+  async function startAllClocks() {
+    await Notification.requestPermission();
     const now = Date.now();
     setState(
       mergeLeft({
         intervalId: window.setInterval(tickClocks, 200),
         clocks: clocks.map(clock => {
-          const { tournament, disabled } = clock;
+          const { finishTime, disabled } = clock;
           if (disabled) return clock;
-          const tournamentEnterTime = calculateEnterTime(tournament, now);
-          const duration = dayjs(tournamentEnterTime).diff(dayjs(now));
+          const duration = dayjs(finishTime).diff(dayjs(now));
           return {
             ...clock,
             isTicking: true,
             duration,
             remainingTime: duration,
-            finishTime: tournamentEnterTime,
             notificationTimeoutId: window.setTimeout(
               () => notifyEndClock(clock.name),
               duration,
@@ -338,7 +337,6 @@ function App() {
             isTicking: false,
             duration: 0,
             remainingTime: 0,
-            finishTime: undefined,
             notificationTimeoutId: undefined,
           };
         }),
