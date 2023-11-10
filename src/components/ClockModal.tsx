@@ -61,7 +61,7 @@ export function ClockModal({ show = false, hide }: ClockModalProps) {
     blind,
     blindDuration,
   } = state;
-  const { addTournament } = useTournaments();
+  const { addTournaments } = useTournaments();
   return (
     <Modal isOpen={show} onClose={hide} isCentered size='2xl'>
       <ModalOverlay />
@@ -197,7 +197,7 @@ export function ClockModal({ show = false, hide }: ClockModalProps) {
   }
   function saveTournament() {
     if (!isValidForm(state)) return;
-    addTournament(state);
+    addTournaments(state);
     setState(INITIAL_STATE);
     hide();
   }
