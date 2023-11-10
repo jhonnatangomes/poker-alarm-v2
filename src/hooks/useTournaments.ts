@@ -10,10 +10,10 @@ export function useTournaments() {
   }, []);
   return {
     tournaments,
-    addTournament: (tournament: Tournament) => {
+    addTournaments: (...tournamentsToAdd: Tournament[]) => {
       localStorage.setItem(
         'tournaments',
-        JSON.stringify([...tournaments, tournament]),
+        JSON.stringify([...tournaments, ...tournamentsToAdd]),
       );
       dispatchEvent(new Event('storage'));
     },

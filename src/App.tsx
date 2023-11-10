@@ -11,6 +11,7 @@ import {
 import { ClockCard } from './components/ClockCard';
 import { assoc, mergeLeft, prop } from 'ramda';
 import dayjs from 'dayjs';
+import { BsStopCircle, BsPlayCircle } from 'react-icons/bs';
 
 type Clock = {
   remainingTime: number;
@@ -23,7 +24,7 @@ type Clock = {
 };
 
 function App() {
-  const { tournaments, addTournament } = useTournaments();
+  const { tournaments, addTournaments } = useTournaments();
   const tournamentClocksToRender = tournaments.filter(tournament =>
     isWithinStartingRange(tournament, Date.now()),
   );
@@ -34,6 +35,7 @@ function App() {
     intervalId: null as number | null,
   });
   const { isModalOpen, clocks, intervalId } = state;
+  const anyClocksTicking = clocks.some(prop('isTicking'));
   const isDev = import.meta.env.DEV;
   useEffect(() => {
     setState(
@@ -58,13 +60,31 @@ function App() {
         ))}
         <NewClockCard onClick={openClockModal} />
         {isDev && (
-          <NewClockCard
-            onClick={createNewTestTournament}
-            label='Create Test Tournament'
+          <>
+            <NewClockCard
+              onClick={createNewTestTournament}
+              label='Create Test Tournament'
+            />
+            <NewClockCard
+              onClick={batchCreateTestTournaments}
+              label='Batch Create Test Tournaments'
+            />
+          </>
+        )}
+      </div>
+      <div className='bg-grayCard p-2 flex items-center justify-center'>
+        {anyClocksTicking ? (
+          <BsStopCircle
+            className='w-10 h-10 cursor-pointer'
+            onClick={stopAllClocks}
+          />
+        ) : (
+          <BsPlayCircle
+            className='w-10 h-10 cursor-pointer'
+            onClick={startAllClocks}
           />
         )}
       </div>
-      <div className='h-[5%] bg-grayCard'></div>
       <ClockModal show={isModalOpen} hide={hideClockModal} />
     </div>
   );
@@ -91,7 +111,10 @@ function App() {
                   duration,
                   remainingTime: duration,
                   finishTime: tournamentEnterTime,
-                  notificationTimeoutId: setTimeout(notifyEndClock, duration),
+                  notificationTimeoutId: setTimeout(
+                    () => notifyEndClock(clock.name),
+                    duration,
+                  ),
                 }
               : clock,
           ),
@@ -103,7 +126,7 @@ function App() {
     return () => {
       const singleClockTicking = clocks.filter(prop('isTicking')).length === 1;
       if (singleClockTicking && intervalId) clearInterval(intervalId);
-      return setState(
+      setState(
         mergeLeft({
           ...(singleClockTicking ? { intervalId: null } : {}),
           clocks: clocks.map((clock, i) => {
@@ -164,15 +187,13 @@ function App() {
   function stopSound(audio: HTMLAudioElement) {
     audio.pause();
   }
-  async function notifyEndClock() {
+  async function notifyEndClock(title: string) {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
       alert('enable notifications');
       return;
     }
-    const notification = new Notification('End of the clock', {
-      body: 'The clock has ended',
-    });
+    const notification = new Notification(title);
     let soundElement = createSound();
     notification.addEventListener('show', () => startSound(soundElement));
     notification.addEventListener('click', () => stopSound(soundElement));
@@ -192,7 +213,77 @@ function App() {
       blind: 500,
       blindDuration: 0.1,
     };
-    addTournament(tournament);
+    addTournaments(tournament);
+  }
+  function batchCreateTestTournaments() {
+    const now = dayjs();
+    const tournament: Tournament = {
+      name: 'name',
+      buyIn: 5,
+      site: 'site',
+      weekdays: [now.get('day')],
+      startTime: now.add(1, 'minute').format('HH:mm'),
+      initialStackSize: 10_000,
+      desiredStackSize: 20,
+      level: 2,
+      blind: 500,
+      blindDuration: 0.1,
+    };
+    const tournament2: Tournament = {
+      name: 'name',
+      buyIn: 5,
+      site: 'site',
+      weekdays: [now.get('day')],
+      startTime: now.add(2, 'minute').format('HH:mm'),
+      initialStackSize: 10_000,
+      desiredStackSize: 20,
+      level: 2,
+      blind: 500,
+      blindDuration: 0.1,
+    };
+    addTournaments(tournament, tournament2);
+  }
+  function startAllClocks() {
+    const now = Date.now();
+    setState(
+      mergeLeft({
+        intervalId: setInterval(tickClocks, 200),
+        clocks: clocks.map(clock => {
+          const { tournament } = clock;
+          const tournamentEnterTime = calculateEnterTime(tournament, now);
+          const duration = dayjs(tournamentEnterTime).diff(dayjs(now));
+          return {
+            ...clock,
+            isTicking: true,
+            duration,
+            remainingTime: duration,
+            finishTime: tournamentEnterTime,
+            notificationTimeoutId: setTimeout(notifyEndClock, duration),
+          };
+        }),
+      }),
+    );
+  }
+  function stopAllClocks() {
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+    setState(
+      mergeLeft({
+        intervalId: null,
+        clocks: clocks.map(clock => {
+          clearTimeout(clock.notificationTimeoutId);
+          return {
+            ...clock,
+            isTicking: false,
+            duration: 0,
+            remainingTime: 0,
+            finishTime: undefined,
+            notificationTimeoutId: undefined,
+          };
+        }),
+      }),
+    );
   }
 }
 
