@@ -9,7 +9,7 @@ import {
   isWithinStartingRange,
 } from './lib/tournaments';
 import { ClockCard } from './components/ClockCard';
-import { assoc, mergeLeft, prop } from 'ramda';
+import { assoc, mergeLeft, omit, prop } from 'ramda';
 import dayjs from 'dayjs';
 import { BsStopCircle, BsPlayCircle } from 'react-icons/bs';
 import { BsFillPlusCircleFill } from 'react-icons/bs';
@@ -30,10 +30,17 @@ function App() {
   const [state, setState] = useState({
     isModalOpen: false,
     clockIndexToEdit: -1,
+    clockIndexToDuplicate: -1,
     clocks: [] as Clock[],
     intervalId: null as number | null,
   });
-  const { isModalOpen, clocks, intervalId, clockIndexToEdit } = state;
+  const {
+    isModalOpen,
+    clocks,
+    intervalId,
+    clockIndexToEdit,
+    clockIndexToDuplicate,
+  } = state;
   const anyClocksTicking = clocks.some(prop('isTicking'));
   const isDev = import.meta.env.DEV;
   useEffect(() => {
@@ -83,6 +90,7 @@ function App() {
               onStop={onStop(i)}
               onDelete={() => deleteTournament(clock.tournament.id)}
               onEdit={() => editClock(i)}
+              onDuplicate={() => duplicateClock(i)}
             />
           ))}
           {isDev && (
@@ -96,13 +104,6 @@ function App() {
                 label='Batch Create Test Tournaments'
               />
             </>
-          )}
-          {clockIndexToEdit !== -1 && (
-            <ClockModal
-              show={true}
-              hide={hideEditModal}
-              tournament={clocks[clockIndexToEdit].tournament}
-            />
           )}
         </div>
         <div className='fixed bottom-20 right-6 flex justify-center items-center h-20 w-20'>
@@ -126,6 +127,20 @@ function App() {
         )}
       </div>
       <ClockModal show={isModalOpen} hide={hideClockModal} />
+      {clockIndexToEdit !== -1 && (
+        <ClockModal
+          show={true}
+          hide={hideEditModal}
+          tournament={clocks[clockIndexToEdit].tournament}
+        />
+      )}
+      {clockIndexToDuplicate !== -1 && (
+        <ClockModal
+          show={true}
+          hide={hideDuplicateModal}
+          tournament={omit(['id'], clocks[clockIndexToDuplicate].tournament)}
+        />
+      )}
     </div>
   );
   function openClockModal() {
@@ -335,6 +350,12 @@ function App() {
   }
   function hideEditModal() {
     setState(assoc('clockIndexToEdit', -1));
+  }
+  function duplicateClock(index: number) {
+    setState(assoc('clockIndexToDuplicate', index));
+  }
+  function hideDuplicateModal() {
+    setState(assoc('clockIndexToDuplicate', -1));
   }
 }
 

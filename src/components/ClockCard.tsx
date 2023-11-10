@@ -1,6 +1,7 @@
 import { BsPlayCircle, BsStopCircle } from 'react-icons/bs';
 import { Clock } from './Clock';
 import { AiOutlineEdit, AiOutlineDelete } from 'react-icons/ai';
+import { BiDuplicate } from 'react-icons/bi';
 
 type ClockCardProps = {
   name: string;
@@ -13,6 +14,7 @@ type ClockCardProps = {
   disabled?: boolean;
   onEdit: () => unknown;
   onDelete: () => unknown;
+  onDuplicate: () => unknown;
 };
 
 export function ClockCard({
@@ -26,6 +28,7 @@ export function ClockCard({
   disabled,
   onDelete,
   onEdit,
+  onDuplicate,
 }: ClockCardProps) {
   return (
     <div
@@ -55,6 +58,10 @@ export function ClockCard({
         </button>
       </div>
       <div className='absolute top-3 right-2 flex gap-x-2'>
+        <BiDuplicate
+          className='cursor-pointer'
+          onClick={!disabled ? onDuplicate : undefined}
+        />
         <AiOutlineEdit
           onClick={!disabled ? onEdit : undefined}
           className='cursor-pointer'
