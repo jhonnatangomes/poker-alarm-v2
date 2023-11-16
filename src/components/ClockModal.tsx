@@ -77,7 +77,9 @@ export function ClockModal({
     <Modal isOpen={show} onClose={hide} isCentered size='2xl'>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>New Tournament Clock</ModalHeader>
+        <ModalHeader>
+          {id ? 'Edit Tournament Clock' : 'New Tournament Clock'}
+        </ModalHeader>
         <ModalCloseButton />
         <ModalBody display='flex' flexDir='column' rowGap={4}>
           <Input

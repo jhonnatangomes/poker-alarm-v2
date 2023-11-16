@@ -1,5 +1,5 @@
 import dayjs, { Dayjs } from 'dayjs';
-import { intersection, uniq } from 'ramda';
+import { sort, subtract } from 'ramda';
 
 export type Tournament = {
   id?: number;
@@ -17,39 +17,23 @@ export type Tournament = {
 
 const STARTING_RANGE_IN_HOURS = 8;
 
-export function isWithinStartingRange(
-  tournament: Tournament,
-  startTimestamp: number,
-): boolean {
-  const timestamp = dayjs(startTimestamp);
-  const maximumStartTimestamp = timestamp.add(STARTING_RANGE_IN_HOURS, 'hour');
-  const possibleStartingDays = uniq([
-    timestamp.get('day'),
-    maximumStartTimestamp.get('day'),
-  ]);
-  if (!intersection(possibleStartingDays, tournament.weekdays).length) {
-    return false;
-  }
-  const [hours, minutes] = getTournamentEnterTime(tournament);
-  const tournamentStartTimestamps = possibleStartingDays.map(startDay =>
-    timestamp.set('hours', hours).set('minutes', minutes).set('day', startDay),
+export function isWithinStartingRange(tournament: Tournament): boolean {
+  const timestamp = dayjs();
+  const minimumStartTimestamp = timestamp.subtract(
+    STARTING_RANGE_IN_HOURS / 2,
+    'hour',
   );
-  return tournamentStartTimestamps.some(
-    tournamentTimestamp =>
-      tournamentTimestamp.isAfter(
-        timestamp.subtract(STARTING_RANGE_IN_HOURS / 2, 'hours'),
-      ) && tournamentTimestamp.isBefore(maximumStartTimestamp),
+  const maximumStartTimestamp = timestamp.add(STARTING_RANGE_IN_HOURS, 'hour');
+  const tournamentTimestamp = getTournamentEnterTime(tournament);
+  return (
+    tournamentTimestamp.isAfter(minimumStartTimestamp) &&
+    tournamentTimestamp.isBefore(maximumStartTimestamp)
   );
 }
 
-export function calculateEnterTime(tournament: Tournament, now: number): Date {
+export function calculateEnterTime(tournament: Tournament): Date {
   const { level, blindDuration } = tournament;
-  const [hours, minutes] = getTournamentEnterTime(tournament);
-  const tournamentStartTime = dayjs(now)
-    .set('hours', hours)
-    .set('minutes', minutes)
-    .set('seconds', 0)
-    .set('milliseconds', 0);
+  const tournamentStartTime = getTournamentEnterTime(tournament);
   const totalWaitingTime = (level - 1) * blindDuration;
   if (totalWaitingTime === 0) return tournamentStartTime.toDate();
   return getEnterTimeRecursive(tournamentStartTime, totalWaitingTime).toDate();
@@ -70,8 +54,14 @@ export function calculateEnterTime(tournament: Tournament, now: number): Date {
   }
 }
 
-function getTournamentEnterTime(tournament: Tournament): [number, number] {
-  return tournament.startTime.split(':').map(Number) as [number, number];
+function getTournamentEnterTime(tournament: Tournament) {
+  const [hours, minutes] = tournament.startTime.split(':').map(Number);
+  return dayjs()
+    .set('day', getClosestWeekday(tournament.weekdays))
+    .set('hours', hours)
+    .set('minutes', minutes)
+    .set('seconds', 0)
+    .set('milliseconds', 0);
 }
 
 export function getClockTournamentName({
@@ -80,4 +70,12 @@ export function getClockTournamentName({
   buyIn,
 }: Tournament): string {
   return `${name} - ${site}, ${buyIn}`;
+}
+
+function getClosestWeekday(weekdays: number[]) {
+  const currentDay = dayjs().get('day');
+  return (
+    sort(subtract, weekdays).find(weekday => weekday >= currentDay) ||
+    Math.min(...weekdays) + 7
+  );
 }

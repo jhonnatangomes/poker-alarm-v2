@@ -9,13 +9,11 @@ import {
   isWithinStartingRange,
 } from './lib/tournaments';
 import { ClockCard } from './components/ClockCard';
-import { assoc, mergeLeft, omit, prop } from 'ramda';
+import { assoc, mergeLeft, omit, prop, sort } from 'ramda';
 import dayjs from 'dayjs';
 import { Icon } from './components/Icon';
 
 type Clock = {
-  remainingTime: number;
-  duration: number;
   finishTime?: Date;
   name: string;
   isTicking: boolean;
@@ -32,6 +30,7 @@ function App() {
     clockIndexToDuplicate: -1,
     clocks: [] as Clock[],
     intervalId: null as number | null,
+    initialTime: null as number | null,
   });
   const {
     isModalOpen,
@@ -39,6 +38,7 @@ function App() {
     intervalId,
     clockIndexToEdit,
     clockIndexToDuplicate,
+    initialTime,
   } = state;
   const anyClocksTicking = clocks.some(prop('isTicking'));
   const isDev = import.meta.env.DEV;
@@ -47,51 +47,64 @@ function App() {
     setState(
       assoc(
         'clocks',
-        tournaments
-          .map<Clock>(tournament => {
-            const finishTime = calculateEnterTime(tournament, now);
+        sortClocks(
+          tournaments.map<Clock>(tournament => {
+            const finishTime = calculateEnterTime(tournament);
             const enterTimePassed = dayjs(finishTime).isBefore(now);
             return {
               name: getClockTournamentName(tournament),
-              duration: 0,
-              remainingTime: 0,
-              isTicking: false,
+              isTicking:
+                clocks.find(clock => clock.tournament.id === tournament.id)
+                  ?.isTicking || false,
               tournament,
-              ...(isWithinStartingRange(tournament, now) && !enterTimePassed
+              ...(isWithinStartingRange(tournament) && !enterTimePassed
                 ? { finishTime }
                 : { disabled: true }),
             };
-          })
-          .sort((a, b) => {
-            if (a.finishTime && b.finishTime) {
-              return a.finishTime.getTime() - b.finishTime.getTime();
-            }
-            if (a.finishTime && !b.finishTime) {
-              return -1;
-            }
-            if (!a.finishTime && b.finishTime) {
-              return 1;
-            }
-            return 0;
           }),
+        ),
       ),
     );
   }, [tournaments]);
+  function sortClocks(clocks: Clock[]) {
+    return sort((a, b) => {
+      if (a.finishTime && b.finishTime) {
+        return a.finishTime.getTime() - b.finishTime.getTime();
+      }
+      if (a.finishTime && !b.finishTime) {
+        return -1;
+      }
+      if (!a.finishTime && b.finishTime) {
+        return 1;
+      }
+      return 0;
+    }, clocks);
+  }
   return (
     <div className='h-screen w-full flex flex-col justify-between gap-6'>
       <div className='p-6 flex justify-center overflow-y-auto relative'>
         <div className='grid grid-cols-4 gap-4'>
-          {clocks.map((clock, i) => (
-            <ClockCard
-              key={i}
-              {...clock}
-              onPlay={onPlay(i)}
-              onStop={onStop(i)}
-              onDelete={() => deleteTournament(clock.tournament.id)}
-              onEdit={() => editClock(i)}
-              onDuplicate={() => duplicateClock(i)}
-            />
-          ))}
+          {clocks.map((clock, i) => {
+            return (
+              <ClockCard
+                key={i}
+                {...clock}
+                duration={
+                  clock.isTicking
+                    ? calculateClockDuration(clock, initialTime)
+                    : 0
+                }
+                remainingTime={
+                  clock.isTicking ? calculateClockRemainingTime(clock) : 0
+                }
+                onPlay={onPlay(i)}
+                onStop={onStop(i)}
+                onDelete={() => deleteTournament(clock.tournament.id)}
+                onEdit={() => editClock(i)}
+                onDuplicate={() => duplicateClock(i)}
+              />
+            );
+          })}
           {isDev && (
             <>
               <NewClockCard
@@ -146,24 +159,21 @@ function App() {
   function onPlay(index: number) {
     return async () => {
       await Notification.requestPermission();
-      const { finishTime } = clocks[index];
       const now = Date.now();
-      const duration = dayjs(finishTime).diff(dayjs(now));
       setState(
         mergeLeft({
           ...(!intervalId
             ? { intervalId: window.setInterval(tickClocks, 200) }
             : {}),
+          initialTime: now,
           clocks: clocks.map((clock, i) =>
             i === index
               ? {
                   ...clock,
                   isTicking: true,
-                  duration,
-                  remainingTime: duration,
                   notificationTimeoutId: window.setTimeout(
                     () => notifyEndClock(clock.name),
-                    duration,
+                    calculateClockDuration(clock, now),
                   ),
                 }
               : clock,
@@ -178,15 +188,15 @@ function App() {
       if (singleClockTicking && intervalId) clearInterval(intervalId);
       setState(
         mergeLeft({
-          ...(singleClockTicking ? { intervalId: null } : {}),
+          ...(singleClockTicking
+            ? { intervalId: null, initialTime: null }
+            : {}),
           clocks: clocks.map((clock, i) => {
             if (i === index) {
               clearTimeout(clock.notificationTimeoutId);
               return {
                 ...clock,
                 isTicking: false,
-                duration: 0,
-                remainingTime: 0,
                 notificationTimeoutId: undefined,
               };
             }
@@ -201,25 +211,23 @@ function App() {
       const { clocks, intervalId } = state;
       const singleClockTicking = clocks.filter(prop('isTicking')).length === 1;
       const clockEnded =
-        (clocks.find(prop('isTicking'))?.remainingTime || 0) <= 0;
+        calculateClockRemainingTime(clocks.find(prop('isTicking'))) <= 0;
       const lastClockStopped = singleClockTicking && clockEnded && !!intervalId;
       if (lastClockStopped) {
-        if (clockEnded && intervalId) clearInterval(intervalId);
+        clearInterval(intervalId);
       }
+      const newClocks = clocks.map(clock => {
+        const { isTicking } = clock;
+        if (!isTicking) return clock;
+        const clockEnded = calculateClockRemainingTime(clock) <= 0;
+        return {
+          ...clock,
+          ...(clockEnded ? { isTicking: false, finishTime: undefined } : {}),
+        };
+      });
       return {
         ...state,
-        clocks: clocks.map(clock => {
-          const { isTicking, finishTime } = clock;
-          if (!isTicking) return clock;
-          const now = dayjs();
-          const remainingTime = dayjs(finishTime).diff(now, 'seconds') * 1000;
-          const clockEnded = remainingTime <= 0;
-          return {
-            ...clock,
-            ...(clockEnded ? { isTicking: false } : {}),
-            remainingTime: clockEnded ? 0 : remainingTime,
-          };
-        }),
+        clocks: clockEnded ? sortClocks(newClocks) : newClocks,
         ...(lastClockStopped ? { intervalId: null } : {}),
       };
     });
@@ -298,18 +306,16 @@ function App() {
     setState(
       mergeLeft({
         intervalId: window.setInterval(tickClocks, 200),
+        initialTime: now,
         clocks: clocks.map(clock => {
-          const { finishTime, disabled } = clock;
+          const { disabled } = clock;
           if (disabled) return clock;
-          const duration = dayjs(finishTime).diff(dayjs(now));
           return {
             ...clock,
             isTicking: true,
-            duration,
-            remainingTime: duration,
             notificationTimeoutId: window.setTimeout(
               () => notifyEndClock(clock.name),
-              duration,
+              calculateClockDuration(clock, now),
             ),
           };
         }),
@@ -323,14 +329,13 @@ function App() {
     setState(
       mergeLeft({
         intervalId: null,
+        initialTime: null,
         clocks: clocks.map(clock => {
           if (clock.disabled) return clock;
           clearTimeout(clock.notificationTimeoutId);
           return {
             ...clock,
             isTicking: false,
-            duration: 0,
-            remainingTime: 0,
             notificationTimeoutId: undefined,
           };
         }),
@@ -348,6 +353,14 @@ function App() {
   }
   function hideDuplicateModal() {
     setState(assoc('clockIndexToDuplicate', -1));
+  }
+  function calculateClockDuration(clock: Clock, initialTime: number | null) {
+    return initialTime && clock.finishTime
+      ? clock.finishTime.getTime() - initialTime
+      : 0;
+  }
+  function calculateClockRemainingTime(clock?: Clock) {
+    return clock?.finishTime ? clock.finishTime.getTime() - Date.now() : 0;
   }
 }
 

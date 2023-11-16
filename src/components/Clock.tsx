@@ -2,17 +2,17 @@ import dayjs from 'dayjs';
 
 type ClockProps = {
   radius?: number;
-  remainingTime: number;
-  duration: number;
+  remainingTime?: number;
+  duration?: number;
   finishTime?: Date;
 };
 export function Clock({
   radius = 68,
-  remainingTime,
-  duration,
+  remainingTime = 0,
+  duration = 0,
   finishTime,
 }: ClockProps) {
-  const progress = remainingTime / duration || 0;
+  const progress = duration ? remainingTime / duration : 0;
   const circumference = 2 * Math.PI * radius;
   const unfilledSection = circumference * (1 - progress);
   return (
@@ -34,7 +34,7 @@ export function Clock({
         <circle
           cx='80'
           cy='80'
-          r='68'
+          r={radius}
           fill='transparent'
           stroke='#4FC2FB'
           strokeWidth='12px'
@@ -44,7 +44,7 @@ export function Clock({
         />
       </svg>
       <div className='absolute top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2'>
-        <p className='text-xl'>{formatTime(remainingTime)}</p>
+        <p className='text-xl'>{formatTime(duration ? remainingTime : 0)}</p>
         {finishTime && (
           <div className='flex justify-center mt-2'>
             <p className='text-xs w-14 text-center border border-solid border-gray rounded-lg'>
