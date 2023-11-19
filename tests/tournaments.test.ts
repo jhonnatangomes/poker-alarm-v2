@@ -1,4 +1,4 @@
-import { Tournament, calculateEnterTime } from '../lib/tournaments';
+import { calculateEnterTime, Tournament } from '../src/lib/tournaments';
 
 describe('calculateEnterTime', () => {
   const tournament: Tournament = {
@@ -13,25 +13,21 @@ describe('calculateEnterTime', () => {
     blind: 10,
     blindDuration: 10,
   };
-  const now = new Date(2022, 1, 1, 18, 0, 0, 0);
   it('works', () => {
-    const tournamentEnterTime = calculateEnterTime(tournament, now.getTime());
+    const tournamentEnterTime = calculateEnterTime(tournament);
     expect(tournamentEnterTime.getHours()).toBe(20);
     expect(tournamentEnterTime.getMinutes()).toBe(35);
   });
   it('works when startTime is in break', () => {
-    const tournamentEnterTime = calculateEnterTime(
-      { ...tournament, startTime: '19:57' },
-      now.getTime(),
-    );
+    const tournamentEnterTime = calculateEnterTime({
+      ...tournament,
+      startTime: '19:57',
+    });
     expect(tournamentEnterTime.getHours()).toBe(21);
     expect(tournamentEnterTime.getMinutes()).toBe(35);
   });
   it('works when we wanna enter in first level', () => {
-    const tournamentEnterTime = calculateEnterTime(
-      { ...tournament, level: 1 },
-      now.getTime(),
-    );
+    const tournamentEnterTime = calculateEnterTime({ ...tournament, level: 1 });
     expect(tournamentEnterTime.getHours()).toBe(19);
     expect(tournamentEnterTime.getMinutes()).toBe(0);
   });
